@@ -2,6 +2,11 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import requests
+from dotenv import load_dotenv
+import os
+
+# Загружаем переменные окружения из файла .env
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -32,28 +37,42 @@ with app.app_context():
 def reserve_table():
     data = request.get_json()
 
-    # Сохранение данных в базе
-    new_booking = Booking(
-        date=data.get('date'),
-        time=data.get('time'),
-        guests=data.get('guests'),
-        occasion=data.get('occasion'),
-        phone=data.get('phone'),
-        email=data.get('email')
-    )
-    db.session.add(new_booking)
-    db.session.commit()
+    # Валидация входных данных
+    if not all(key in data for key in ['date', 'time', 'guests', 'occasion', 'phone', 'email']):
+        return jsonify({'status': 'error', 'message': 'Missing fields'}), 400
 
-    # Отправка уведомления в Telegram
-    send_telegram_notification(data)
+    try:
+        # Сохранение данных в базе
+        new_booking = Booking(
+            date=data.get('date'),
+            time=data.get('time'),
+            guests=data.get('guests'),
+            occasion=data.get('occasion'),
+            phone=data.get('phone'),
+            email=data.get('email')
+        )
+        db.session.add(new_booking)
+        db.session.commit()
 
-    return jsonify({'status': 'success', 'message': 'Reservation received'})
+        # Отправка уведомления в Telegram
+        send_telegram_notification(data)
+
+        return jsonify({'status': 'success', 'message': 'Reservation received'}), 200
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'status': 'error', 'message': 'Internal Server Error'}), 500
 
 
 def send_telegram_notification(data):
-    # Ваш Telegram токен и ID чата
-    bot_token = "7529848581:AAHS2Ka13rO32rLB12FJk8ClkZ-0zmC3GHw"
-    chat_id = "873817956"
+    # Получаем токен и ID чата из переменных окружения
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    # Проверка на наличие токена и ID чата
+    if not bot_token or not chat_id:
+        print("Telegram bot token or chat ID is not set.")
+        return
 
     # Сообщение для отправки
     message = (
@@ -72,7 +91,11 @@ def send_telegram_notification(data):
         "chat_id": chat_id,
         "text": message
     }
-    requests.post(url, json=payload)
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()  # Проверка на успешность запроса
+    except requests.exceptions.RequestException as e:
+        print(f"Telegram notification error: {e}")
 
 
 if __name__ == '__main__':
