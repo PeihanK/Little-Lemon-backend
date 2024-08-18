@@ -1,22 +1,31 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from flask_migrate import Migrate
 import requests
 from dotenv import load_dotenv
 import os
+from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 # Загружаем переменные окружения из файла .env
 load_dotenv()
 
 app = Flask(__name__)
 
-# Настройка базы данных SQLite
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///bookings.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "instance", "booking.db")}'
+
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://littlelemonproject.netlify.app/"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-# Модель для хранения бронирований
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.String(50), nullable=False)
@@ -26,11 +35,6 @@ class Booking(db.Model):
     phone = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-# Создаем таблицу в базе данных
-with app.app_context():
-    db.create_all()
 
 
 @app.route('/api/reserve', methods=['POST'])
@@ -76,12 +80,12 @@ def send_telegram_notification(data):
 
     # Сообщение для отправки
     message = (
-        f"Новая заявка на бронирование!\n"
-        f"Дата: {data.get('date')}\n"
-        f"Время: {data.get('time')}\n"
-        f"Гостей: {data.get('guests')}\n"
-        f"Повод: {data.get('occasion')}\n"
-        f"Телефон: {data.get('phone')}\n"
+        f"New reservation!\n"
+        f"Date: {data.get('date')}\n"
+        f"Time: {data.get('time')}\n"
+        f"Guests: {data.get('guests')}\n"
+        f"Occasion: {data.get('occasion')}\n"
+        f"Phone: {data.get('phone')}\n"
         f"Email: {data.get('email')}"
     )
 
