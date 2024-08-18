@@ -22,7 +22,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # Настройка CORS
-CORS(app, resources={r"/api/*": {"origins": "https://littlelemonproject.netlify.app"}})
+CORS(app, resources={r"/api/*": {"origins": "https://littlelemonproject.netlify.app/booking"}})
 
 
 # Определение модели
