@@ -5,27 +5,27 @@ import requests
 from dotenv import load_dotenv
 import os
 from datetime import datetime
-from fastapi.middleware.cors import CORSMiddleware
+from flask_cors import CORS
 
 # Загружаем переменные окружения из файла .env
 load_dotenv()
 
 app = Flask(__name__)
 
+# Настройка базы данных
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "instance", "booking.db")}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Инициализация расширений
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://littlelemonproject.netlify.app/"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Настройка CORS
+CORS(app, resources={r"/api/*": {"origins": "https://littlelemonproject.netlify.app"}})
 
 
+# Определение модели
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.String(50), nullable=False)
@@ -37,6 +37,7 @@ class Booking(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+# Определение маршрута
 @app.route('/api/reserve', methods=['POST'])
 def reserve_table():
     data = request.get_json()
@@ -68,6 +69,7 @@ def reserve_table():
         return jsonify({'status': 'error', 'message': 'Internal Server Error'}), 500
 
 
+# Функция отправки уведомлений в Telegram
 def send_telegram_notification(data):
     # Получаем токен и ID чата из переменных окружения
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -102,5 +104,6 @@ def send_telegram_notification(data):
         print(f"Telegram notification error: {e}")
 
 
+# Запуск приложения
 if __name__ == '__main__':
     app.run(debug=True)
