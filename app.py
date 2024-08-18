@@ -15,14 +15,14 @@ app = Flask(__name__)
 # Настройка базы данных
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "instance", "booking.db")}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
 # Инициализация расширений
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # Настройка CORS
-CORS(app, resources={r"/api/*": {"origins": "https://littlelemonproject.netlify.app/booking"}})
+CORS(app, resources={r"/api/*": {"origins": "https://littlelemonproject.netlify.app"}})
 
 
 # Определение модели
